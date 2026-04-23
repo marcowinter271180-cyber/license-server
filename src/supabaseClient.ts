@@ -1,14 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-if (!process.env.SUPABASE_URL) {
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl) {
   throw new Error("SUPABASE_URL fehlt in .env");
 }
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY fehlt in .env");
+if (!supabaseAnonKey) {
+  throw new Error("SUPABASE_ANON_KEY fehlt in .env");
 }
 
-export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

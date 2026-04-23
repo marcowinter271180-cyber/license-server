@@ -9,32 +9,26 @@ type LicenseRow = {
   device_id: string | null;
 };
 
-function normalizeDeviceId(value: unknown): string | null {
-  if (!value) return null;
-
-  const v = String(value).trim();
-
-  if (!v || v.toLowerCase() === "null" || v === "") {
-    return null;
-  }
-
-  return v;
-}
-
 export async function validateLicense(req: Request, res: Response) {
   try {
-    const { licenseKey, deviceId } = req.body;
-
-    console.log("LICENSE CHECK:", licenseKey);
+    const { licenseKey, deviceId } = req.body as {
+      licenseKey?: string;
+      deviceId?: string;
+    };
 
     if (!licenseKey || typeof licenseKey !== "string") {
       return res.status(400).json({
         valid: false,
-        reason: "NO_LICENSE_KEY"
+        reason: "NO_LICENSE_KEY",
       });
     }
 
-    const normalizedDeviceId = normalizeDeviceId(deviceId);
+    if (!deviceId || typeof deviceId !== "string") {
+      return res.status(400).json({
+        valid: false,
+        reason: "NO_DEVICE_ID",
+      });
+    }
 
     const { data, error } = await supabase
       .from("licenses")
@@ -47,70 +41,72 @@ export async function validateLicense(req: Request, res: Response) {
       console.error("SUPABASE ERROR:", error);
       return res.status(500).json({
         valid: false,
-        reason: "DB_ERROR"
+        reason: "DB_ERROR",
       });
     }
 
-    console.log("DB RESULT:", data);
-
     if (!data) {
-      return res.json({
+      return res.status(404).json({
         valid: false,
-        reason: "NOT_FOUND"
+        reason: "NOT_FOUND",
       });
     }
 
     if (!data.activated) {
       return res.json({
         valid: false,
-        reason: "INACTIVE"
+        reason: "INACTIVE",
       });
     }
 
-    // Ablaufprüfung
     if (data.expires_at) {
       const now = Date.now();
       const expires = new Date(data.expires_at).getTime();
 
-      console.log("NOW:", new Date(now).toISOString());
-      console.log("EXPIRES:", new Date(expires).toISOString());
+      if (Number.isNaN(expires)) {
+        console.error("INVALID DATE:", data.expires_at);
+        return res.status(500).json({
+          valid: false,
+          reason: "INVALID_DATE",
+        });
+      }
 
-      if (isNaN(expires) || now >= expires) {
+      if (now >= expires) {
         return res.json({
           valid: false,
-          reason: "EXPIRED"
+          reason: "EXPIRED",
         });
       }
     }
 
-    const dbDeviceId = normalizeDeviceId(data.device_id);
-
-    // Device mismatch prüfen
-    if (dbDeviceId && normalizedDeviceId && dbDeviceId !== normalizedDeviceId) {
+    // Device Check
+    if (data.device_id && data.device_id !== deviceId) {
       return res.json({
         valid: false,
-        reason: "DEVICE_MISMATCH"
+        reason: "DEVICE_MISMATCH",
       });
     }
 
-    // Device setzen (nur wenn noch nicht gesetzt)
-    if (!dbDeviceId && normalizedDeviceId) {
+    // Device Binding (nur wenn noch nicht gesetzt)
+    if (!data.device_id) {
       const { error: updateError } = await supabase
         .from("licenses")
-        .update({ device_id: normalizedDeviceId })
+        .update({ device_id: deviceId })
         .eq("id", data.id)
-        .is("device_id", null); // verhindert race overwrite
+        .is("device_id", null); // verhindert race condition
 
       if (updateError) {
         console.error("DEVICE SAVE ERROR:", updateError);
-      } else {
-        console.log("DEVICE REGISTERED:", normalizedDeviceId);
+        return res.status(500).json({
+          valid: false,
+          reason: "DEVICE_BIND_FAILED",
+        });
       }
     }
 
     return res.json({
       valid: true,
-      expiresAt: data.expires_at ?? null
+      expiresAt: data.expires_at ?? null,
     });
 
   } catch (err) {
@@ -118,7 +114,7 @@ export async function validateLicense(req: Request, res: Response) {
 
     return res.status(500).json({
       valid: false,
-      reason: "SERVER_ERROR"
+      reason: "SERVER_ERROR",
     });
   }
 }
