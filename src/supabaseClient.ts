@@ -70,5 +70,14 @@ if (!isRenderDeployment() && extractProjectRef(supabaseUrl) === PRODUCTION_PROJE
 }
 
 // ─── Supabase-Client ──────────────────────────────────────────────────────────
+//
+// SUPABASE_MOCK=true → In-Memory-Mock (nur NODE_ENV=test / .env.test)
+// Andernfalls → echter Supabase-Client mit korrekten Production-Credentials.
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Dynamic require verhindert, dass mockSupabase in Production-Bundles geladen wird.
+// Der Cast zu `any` erlaubt den polymorphen Einsatz beider Client-Varianten.
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
+export const supabase: any =
+  process.env.SUPABASE_MOCK === "true"
+    ? require("./mockSupabase").createMockSupabaseClient()
+    : createClient(supabaseUrl, supabaseKey);

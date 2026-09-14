@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VERMiet-es Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+a,button{cursor:pointer}
+button{border:none;outline:none}
+
+/* Login */
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:36px;width:340px}
+.login-box h1{font-size:18px;font-weight:700;margin-bottom:4px;color:#f1f5f9}
+.login-box p{font-size:12px;color:#64748b;margin-bottom:24px}
+.login-box input{width:100%;padding:10px 14px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:14px;margin-bottom:12px}
+.login-box input:focus{outline:none;border-color:#0ea5e9}
+.btn-primary{width:100%;padding:10px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:14px;font-weight:600}
+.btn-primary:hover{background:#0284c7}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.error-msg{color:#f87171;font-size:12px;margin-top:8px;min-height:16px}
+
+/* Layout */
+#admin{display:none;min-height:100vh}
+header{background:#1e293b;border-bottom:1px solid #334155;padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:15px;font-weight:700;color:#f1f5f9}
+header span{font-size:12px;color:#64748b}
+.btn-logout{padding:6px 14px;background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:6px;font-size:12px}
+.btn-logout:hover{border-color:#64748b;color:#e2e8f0}
+
+/* Tabs */
+nav{display:flex;gap:2px;padding:16px 24px 0;border-bottom:1px solid #1e293b}
+.tab{padding:8px 18px;background:transparent;color:#64748b;font-size:13px;font-weight:500;border-bottom:2px solid transparent;border-radius:0}
+.tab.active{color:#0ea5e9;border-bottom-color:#0ea5e9}
+.tab:hover:not(.active){color:#94a3b8}
+
+/* Content */
+main{padding:24px}
+section{display:none}
+section.active{display:block}
+h2{font-size:14px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+
+/* Card */
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;margin-bottom:16px}
+
+/* Form */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:#64748b;margin-bottom:5px;font-weight:500}
+.field select,.field input{width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:13px}
+.field select:focus,.field input:focus{outline:none;border-color:#0ea5e9}
+.btn-action{padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600}
+.btn-green{background:#059669;color:#fff}
+.btn-green:hover{background:#047857}
+.btn-green:disabled{opacity:.5;cursor:default}
+.btn-sm{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600}
+.btn-red{background:#dc2626;color:#fff}
+.btn-red:hover{background:#b91c1c}
+.btn-yellow{background:#d97706;color:#fff}
+.btn-yellow:hover{background:#b45309}
+.btn-slate{background:#334155;color:#94a3b8}
+.btn-slate:hover{background:#475569;color:#e2e8f0}
+
+/* Result box */
+.result{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:12px;margin-top:12px;font-size:13px;display:none}
+.result.ok{border-color:#059669;color:#34d399}
+.result.err{border-color:#dc2626;color:#f87171}
+.code-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.code-val{font-family:monospace;font-size:14px;color:#f1f5f9;background:#1e293b;padding:6px 10px;border-radius:4px;flex:1;word-break:break-all}
+.btn-copy{padding:5px 12px;background:#0ea5e9;color:#fff;border-radius:4px;font-size:11px;font-weight:600}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #334155;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid #1e293b;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-green{background:#064e3b;color:#34d399}
+.badge-red{background:#450a0a;color:#f87171}
+.badge-yellow{background:#451a03;color:#fb923c}
+.mono{font-family:monospace;color:#94a3b8}
+.refresh-btn{margin-bottom:12px;padding:6px 14px;background:#334155;color:#94a3b8;border-radius:6px;font-size:12px}
+.refresh-btn:hover{background:#475569;color:#e2e8f0}
+.empty{padding:32px;text-align:center;color:#64748b;font-size:13px}
+.loading{color:#64748b;font-size:13px;padding:16px 0}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login">
+  <div class="login-box">
+    <h1>VERMiet-es Admin</h1>
+    <p>Nur für autorisierte Betreiber</p>
+    <input type="password" id="pw-input" placeholder="Admin-Passwort" autocomplete="current-password">
+    <button class="btn-primary" id="login-btn">Anmelden</button>
+    <div class="error-msg" id="login-err"></div>
+  </div>
+</div>
+
+<!-- Admin -->
+<div id="admin">
+  <header>
+    <h1>VERMiet-es Admin</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="header-info"></span>
+      <button class="btn-logout" id="logout-btn">Abmelden</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="create">Lizenz erstellen</button>
+    <button class="tab" data-tab="licenses">Lizenzen</button>
+    <button class="tab" data-tab="resets">Reset-Anfragen</button>
+  </nav>
+
+  <main>
+
+    <!-- Tab: Lizenz erstellen -->
+    <section id="tab-create" class="active">
+      <div class="card">
+        <h2>Neue Lizenz erstellen</h2>
+        <div class="field">
+          <label>Modul</label>
+          <select id="c-module">
+            <option value="property">PROPERTY – Objekte, Mieter, Zahlungen</option>
+            <option value="nk">NK – + Nebenkostenabrechnung</option>
+            <option value="complete">COMPLETE – Alle Module</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Laufzeit</label>
+          <select id="c-duration">
+            <option value="monthly">Monatlich</option>
+            <option value="yearly">Jährlich</option>
+            <option value="lifetime">Lifetime</option>
+          </select>
+        </div>
+        <button class="btn-action btn-green" id="create-btn">Lizenz generieren</button>
+        <div class="result" id="create-result"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Lizenzen -->
+    <section id="tab-licenses">
+      <button class="refresh-btn" id="lic-refresh">↻ Aktualisieren</button>
+      <div class="card" style="padding:0">
+        <div id="lic-body"><div class="loading" style="padding:20px">Lade…</div></div>
+      </div>
+    </section>
+
+    <!-- Tab: Reset-Anfragen -->
+    <section id="tab-resets">
+      <button class="refresh-btn" id="rst-refresh">↻ Aktualisieren</button>
+      <div class="card" style="padding:0">
+        <div id="rst-body"><div class="loading" style="padding:20px">Lade…</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+'use strict';
+
+let csrf = null;
+
+// ─── API-Hilfsfunktion ────────────────────────────────────────────────────────
+
+async function api(path, method, body) {
+  const opts = {
+    method: method || 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (csrf && method !== 'GET') opts.headers['X-CSRF-Token'] = csrf;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  const json = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data: json };
+}
+
+// ─── Init: Session-Prüfung ───────────────────────────────────────────────────
+
+async function init() {
+  const r = await api('/admin/csrf-token');
+  if (r.ok && r.data.csrfToken) {
+    csrf = r.data.csrfToken;
+    showAdmin();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('admin').style.display = 'none';
+  document.getElementById('pw-input').focus();
+}
+
+function showAdmin() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('admin').style.display = 'block';
+  loadCurrentTab();
+}
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  if (!pw) { err.textContent = 'Bitte Passwort eingeben.'; return; }
+  btn.disabled = true; btn.textContent = 'Prüfe…'; err.textContent = '';
+  const r = await api('/admin/login', 'POST', { password: pw });
+  btn.disabled = false; btn.textContent = 'Anmelden';
+  document.getElementById('pw-input').value = '';
+  if (r.ok && r.data.csrfToken) {
+    csrf = r.data.csrfToken;
+    showAdmin();
+  } else {
+    err.textContent = r.data.error || 'Anmeldung fehlgeschlagen.';
+  }
+}
+
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ─── Logout ───────────────────────────────────────────────────────────────────
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await api('/admin/logout', 'POST');
+  csrf = null;
+  showLogin();
+});
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+let activeTab = 'create';
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    activeTab = tab;
+    document.getElementById('tab-' + tab).classList.add('active');
+    loadTab(tab);
+  });
+});
+
+function loadCurrentTab() { loadTab(activeTab); }
+
+function loadTab(tab) {
+  if (tab === 'licenses') loadLicenses();
+  if (tab === 'resets') loadResets();
+}
+
+// ─── Tab: Lizenz erstellen ────────────────────────────────────────────────────
+
+document.getElementById('create-btn').addEventListener('click', async () => {
+  const module   = document.getElementById('c-module').value;
+  const duration = document.getElementById('c-duration').value;
+  const btn = document.getElementById('create-btn');
+  const box = document.getElementById('create-result');
+  btn.disabled = true; btn.textContent = 'Erstelle…';
+  box.style.display = 'none';
+
+  const r = await api('/admin/api/license/create', 'POST', { module, duration });
+  btn.disabled = false; btn.textContent = 'Lizenz generieren';
+
+  if (r.ok && r.data.license) {
+    const l = r.data.license;
+    box.className = 'result ok';
+    box.innerHTML = `
+      <div>Lizenz erstellt — ${l.module.toUpperCase()} · ${l.duration} · ${l.expiresAt ? 'bis ' + new Date(l.expiresAt).toLocaleDateString('de-DE') : 'Lifetime'}</div>
+      <div class="code-row">
+        <span class="code-val" id="new-code">${l.code}</span>
+        <button class="btn-copy" onclick="copy('${l.code}',this)">Kopieren</button>
+      </div>`;
+  } else {
+    box.className = 'result err';
+    box.textContent = r.data.error || 'Fehler beim Erstellen.';
+  }
+  box.style.display = 'block';
+});
+
+function copy(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Kopiert!';
+    setTimeout(() => { btn.textContent = 'Kopieren'; }, 1800);
+  });
+}
+
+// ─── Tab: Lizenzen ────────────────────────────────────────────────────────────
+
+document.getElementById('lic-refresh').addEventListener('click', loadLicenses);
+
+async function loadLicenses() {
+  const body = document.getElementById('lic-body');
+  body.innerHTML = '<div class="loading" style="padding:20px">Lade…</div>';
+  const r = await api('/admin/api/licenses');
+  if (!r.ok) { body.innerHTML = `<div class="empty">Fehler: ${r.data.error || 'Unbekannt'}</div>`; return; }
+  const list = r.data.licenses || [];
+  if (!list.length) { body.innerHTML = '<div class="empty">Keine Lizenzen vorhanden.</div>'; return; }
+
+  body.innerHTML = `
+  <div class="tbl-wrap"><table>
+    <tr>
+      <th>Code</th><th>Modul</th><th>Laufzeit</th><th>Status</th>
+      <th>Gerät</th><th>Aktiviert</th><th>Ablauf</th><th>Aktion</th>
+    </tr>
+    ${list.map(l => `
+    <tr>
+      <td class="mono">${l.code}</td>
+      <td>${l.module || '—'}</td>
+      <td>${l.duration || '—'}</td>
+      <td><span class="badge ${l.activated ? 'badge-green' : 'badge-red'}">${l.activated ? 'Aktiv' : 'Gesperrt'}</span></td>
+      <td class="mono">${l.device_id ? l.device_id.slice(0,8) + '…' : '—'}</td>
+      <td>${l.activated_at ? new Date(l.activated_at).toLocaleDateString('de-DE') : '—'}</td>
+      <td>${l.expires_at ? new Date(l.expires_at).toLocaleDateString('de-DE') : 'Lifetime'}</td>
+      <td>
+        <button class="btn-sm ${l.activated ? 'btn-red' : 'btn-green'}"
+          onclick="toggleLicense(${l.id}, ${!l.activated}, this)">
+          ${l.activated ? 'Sperren' : 'Aktivieren'}
+        </button>
+      </td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function toggleLicense(id, activated, btn) {
+  btn.disabled = true;
+  const r = await api('/admin/api/license/toggle', 'POST', { id, activated });
+  if (r.ok) loadLicenses();
+  else { alert(r.data.error || 'Fehler'); btn.disabled = false; }
+}
+
+// ─── Tab: Reset-Anfragen ──────────────────────────────────────────────────────
+
+document.getElementById('rst-refresh').addEventListener('click', loadResets);
+
+async function loadResets() {
+  const body = document.getElementById('rst-body');
+  body.innerHTML = '<div class="loading" style="padding:20px">Lade…</div>';
+  const r = await api('/admin/api/resets');
+  if (!r.ok) { body.innerHTML = `<div class="empty">Fehler: ${r.data.error || 'Unbekannt'}</div>`; return; }
+  const list = r.data.resets || [];
+  if (!list.length) { body.innerHTML = '<div class="empty">Keine offenen Reset-Anfragen.</div>'; return; }
+
+  body.innerHTML = `
+  <div class="tbl-wrap"><table>
+    <tr>
+      <th>Code</th><th>Modul</th><th>Kunde</th><th>Beantragt</th><th>Aktionen</th>
+    </tr>
+    ${list.map(r => `
+    <tr>
+      <td class="mono">${r.code}</td>
+      <td>${r.module || '—'}</td>
+      <td>${r.kundenname || '—'}</td>
+      <td>
+        <span class="badge badge-yellow">${new Date(r.reset_requested_at).toLocaleString('de-DE')}</span>
+      </td>
+      <td style="display:flex;gap:6px">
+        <button class="btn-sm btn-green" onclick="handleReset(${r.id},'approve',this)">Genehmigen</button>
+        <button class="btn-sm btn-red"   onclick="handleReset(${r.id},'deny',this)">Ablehnen</button>
+      </td>
+    </tr>`).join('')}
+  </table></div>`;
+}
+
+async function handleReset(id, action, btn) {
+  btn.disabled = true;
+  const r = await api('/admin/api/resets/' + action, 'POST', { id });
+  if (r.ok) loadResets();
+  else { alert(r.data.error || 'Fehler'); btn.disabled = false; }
+}
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+
+init();
+</script>
+</body>
+</html>
