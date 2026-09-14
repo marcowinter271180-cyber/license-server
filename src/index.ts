@@ -22,6 +22,11 @@ for (const key of required) {
 
 const app = express();
 
+// Render.com terminiert TLS am Edge-Proxy. Ohne trust proxy sehen
+// express-rate-limit (req.ip) und req.secure die interne Proxy-Verbindung
+// statt der echten Client-IP bzw. des HTTPS-Status.
+app.set("trust proxy", 1);
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 app.use(cors());
